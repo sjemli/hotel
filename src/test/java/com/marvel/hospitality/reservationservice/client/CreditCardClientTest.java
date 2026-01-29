@@ -38,8 +38,7 @@ class CreditCardClientTest {
     }
 
     @Test
-    void verifyPayment_shouldReturnConfirmedResponse() {
-        // GIVEN
+    void should_returnConfirmedResponse_when_apiCallIsSuccessful() {
         String ref = "REF-123";
         PaymentStatusResponse expectedResponse = new PaymentStatusResponse(null, PaymentConfirmationStatus.CONFIRMED);
 
@@ -48,18 +47,15 @@ class CreditCardClientTest {
         when(requestBodyUriSpec.body(any(PaymentStatusRequest.class))).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.retrieve().body(PaymentStatusResponse.class)).thenReturn(expectedResponse);
 
-        // WHEN
         PaymentStatusResponse actualResponse = creditCardClient.verifyPayment(ref);
 
-        // THEN
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.status()).isEqualTo(PaymentConfirmationStatus.CONFIRMED);
     }
 
 
     @Test
-    void verifyPayment_whenServerError_shouldThrowException() {
-        // GIVEN
+    void should_throwException_when_serverReturnsError() {
         String ref = "REF-500";
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
@@ -70,7 +66,6 @@ class CreditCardClientTest {
                 new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Server Error")
         );
 
-        // WHEN & THEN
         assertThatThrownBy(() -> creditCardClient.verifyPayment(ref))
                 .isInstanceOf(HttpServerErrorException.class)
                 .hasMessageContaining("500 Server Error");

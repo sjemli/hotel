@@ -62,14 +62,16 @@ public class ReservationServiceImpl implements ReservationService {
 
 
     private void validateDates(LocalDate start, LocalDate end) {
-        if (!end.isAfter(start)) throw new ReservationValidationException("End date must be after start");
+        if (!end.isAfter(start)) throw new ReservationValidationException("Reservation End date must be after Start date");
         long days = ChronoUnit.DAYS.between(start, end);
-        if (days > 30) throw new ReservationValidationException("Max 30 days");
+        if (days > 30) throw new ReservationValidationException("The Max reservation duration is 30 days");
     }
 
 
     private void handleCreditCardPayment(Reservation res, String ref) {
-        if (ref == null || ref.isBlank()) throw new ReservationValidationException("Ref missing");
+        if (ref == null || ref.isBlank()) {
+            throw new ReservationValidationException("paymentReference is required for CreditCard payments");
+        }
 
         var response = creditCardClient.verifyPayment(ref);
         if (response.status() != PaymentConfirmationStatus.CONFIRMED) {

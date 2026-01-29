@@ -65,13 +65,23 @@ class ReservationServiceImplTest {
     }
 
     @Test
-    void createReservation_CreditCard_MissingRef_Throws() {
+    void createReservation_CreditCard_BlankRef_Throws() {
         ReservationRequest req = new ReservationRequest("John", "101", LocalDate.now(), LocalDate.now().plusDays(2),
                 RoomSegment.MEDIUM, PaymentMode.CREDIT_CARD, "  ");
 
         assertThatThrownBy(() -> service.createReservation(req))
                 .isInstanceOf(ReservationValidationException.class)
-                .hasMessage("Ref missing");
+                .hasMessage("paymentReference is required for CreditCard payments");
+    }
+
+    @Test
+    void createReservation_CreditCard_MissingRef_Throws() {
+        ReservationRequest req = new ReservationRequest("John", "101", LocalDate.now(), LocalDate.now().plusDays(2),
+                RoomSegment.MEDIUM, PaymentMode.CREDIT_CARD, null);
+
+        assertThatThrownBy(() -> service.createReservation(req))
+                .isInstanceOf(ReservationValidationException.class)
+                .hasMessage("paymentReference is required for CreditCard payments");
     }
 
     @Test
@@ -93,7 +103,7 @@ class ReservationServiceImplTest {
 
         assertThatThrownBy(() -> service.createReservation(req))
                 .isInstanceOf(ReservationValidationException.class)
-                .hasMessage("End date must be after start");
+                .hasMessage("Reservation End date must be after Start date");
     }
 
     @Test
@@ -103,7 +113,7 @@ class ReservationServiceImplTest {
 
         assertThatThrownBy(() -> service.createReservation(req))
                 .isInstanceOf(ReservationValidationException.class)
-                .hasMessage("Max 30 days");
+                .hasMessage("The Max reservation duration is 30 days");
     }
 
     // --- TESTS CONFIRM BANK TRANSFER ---

@@ -2,11 +2,14 @@ package com.marvel.hospitality.reservationservice.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marvel.hospitality.reservationservice.dto.PaymentUpdateEvent;
+import com.marvel.hospitality.reservationservice.exception.IllegalPaymentUpdateMessageFormatException;
 import com.marvel.hospitality.reservationservice.service.ReservationService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.support.Acknowledgment;
@@ -33,46 +36,50 @@ class PaymentUpdateListenerTest {
     }
 
     @Test
-    void onMessage_WithValidId_CallsServiceAndAcknowledges() throws Exception {
-        // Arrange
-        String validId = "CONF1234";
-        String payload = createPayload("E2E-REF " + validId);
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
+    void should_throwException_when_payloadIsNotAValidJson() {
+        String malformedJson = "{ \"invalid\": \"json\" ";
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, malformedJson);
 
-        // Act
-        listener.onMessage(record, acknowledgment);
-
-        // Assert
-        verify(reservationService).confirmBankTransferPayment(validId);
-        verify(acknowledgment).acknowledge();
-    }
-
-    @Test
-    void onMessage_WithLowercaseId_ThrowsIllegalArgumentException() throws Exception {
-        // Arrange
-        String invalidId = "conf1234"; // lowercase not allowed by pattern
-        String payload = createPayload("E2E-REF " + invalidId);
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
-
-        // Act & Assert
         assertThatThrownBy(() -> listener.onMessage(record, acknowledgment))
-                .isInstanceOf(RuntimeException.class) 
-                .hasStackTraceContaining("IllegalArgumentException")
-                .hasMessageContaining("Invalid reservationId");
+                .isInstanceOf(IllegalPaymentUpdateMessageFormatException.class)
+                .hasMessageContaining("Unable to parse payment update message");
 
         verifyNoInteractions(reservationService);
         verifyNoInteractions(acknowledgment);
     }
 
     @Test
-    void onMessage_WithMalformedDescription_ThrowsIllegalArgumentException() throws Exception {
+    void should_confirmPaymentAndAcknowledge_when_messageIsValid() throws Exception {
         // Arrange
-        String payload = createPayload("OnlyOnePart");
+        String validId = "CONF1234";
+        String payload = createPayload("E2E-REF " + validId);
         ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
 
-        // Act & Assert
+        listener.onMessage(record, acknowledgment);
+
+        verify(reservationService).confirmBankTransferPayment(validId);
+        verify(acknowledgment).acknowledge();
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "E2E-REF conf1234 | Invalid reservationId (must be exactly 8 uppercase alphanumeric): conf1234",
+            "OnlyOnePart      | Invalid transactionDescription format - expected E2E<10chars> <reservationId>",
+            "NULL             | Missing transactionDescription",
+            "''               | Missing transactionDescription"
+    }, delimiter = '|')
+    void should_throwException_when_payloadIsInvalid(String description, String expectedErrorMessage) throws Exception {
+
+        String finalDescription = "NULL".equals(description) ? null : description;
+        String payload = createPayload(finalDescription);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
+
         assertThatThrownBy(() -> listener.onMessage(record, acknowledgment))
-                .hasMessageContaining("Invalid transactionDescription format");
+                .isInstanceOf(IllegalPaymentUpdateMessageFormatException.class)
+                .hasMessageContaining(expectedErrorMessage);
+
+        verifyNoInteractions(reservationService);
+        verifyNoInteractions(acknowledgment);
     }
 
     private String createPayload(String desc) throws Exception {
@@ -80,3 +87,4 @@ class PaymentUpdateListenerTest {
         return objectMapper.writeValueAsString(event);
     }
 }
+
