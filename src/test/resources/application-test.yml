@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  cron: 0/5 * * * * ?
+
+  kafka:
+    bootstrap-servers: ${spring.kafka.bootstrap-servers}
+logging:
+  level:
+    root: WARN
+    org.springframework: INFO
+    org.apache.kafka: DEBUG
+resilience4j:
+  retry:
+    instances:
+      creditCard:
+        maxAttempts: 8
+        waitDuration: 2s
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException # Timeout/Service Down
+          - org.springframework.web.client.HttpServerErrorException # Errors 5xx
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+
+
