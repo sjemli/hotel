@@ -1,4 +1,4 @@
-package com.marvel.hospitality.reservationservice.enumtype;
+package com.marvel.hospitality.reservationservice.model;
 
 
 public enum RoomSegment {

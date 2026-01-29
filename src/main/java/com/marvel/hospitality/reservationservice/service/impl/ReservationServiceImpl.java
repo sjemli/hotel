@@ -4,8 +4,8 @@ package com.marvel.hospitality.reservationservice.service.impl;
 import com.marvel.hospitality.reservationservice.client.CreditCardClient;
 import com.marvel.hospitality.reservationservice.dto.*;
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.PaymentMode;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.exception.*;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import com.marvel.hospitality.reservationservice.service.ReservationService;
@@ -18,9 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-import static com.marvel.hospitality.reservationservice.enumtype.PaymentMode.CASH;
-import static com.marvel.hospitality.reservationservice.enumtype.ReservationStatus.CONFIRMED;
-import static com.marvel.hospitality.reservationservice.enumtype.ReservationStatus.PENDING_PAYMENT;
+import static com.marvel.hospitality.reservationservice.model.PaymentMode.CASH;
+import static com.marvel.hospitality.reservationservice.model.ReservationStatus.CONFIRMED;
+import static com.marvel.hospitality.reservationservice.model.ReservationStatus.PENDING_PAYMENT;
 
 
 @Slf4j

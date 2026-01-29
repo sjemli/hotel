@@ -89,7 +89,6 @@ class CreditCardClientIntegrationTest {
 
     @Test
     void testCircuitBreaker_StateTransition_ToOpen() {
-        // Scénario: Atteindre le threshold (50% de 5 appels minimum)
         wireMockServer.stubFor(post(urlPathMatching("/credit-card-payment-api/.*"))
                 .willReturn(aResponse().withStatus(500)));
 

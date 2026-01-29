@@ -4,7 +4,7 @@ package com.marvel.hospitality.reservationservice.service.impl;
 import com.marvel.hospitality.reservationservice.client.CreditCardClient;
 import com.marvel.hospitality.reservationservice.dto.*;
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.*;
+import com.marvel.hospitality.reservationservice.model.*;
 import com.marvel.hospitality.reservationservice.exception.*;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import org.junit.jupiter.api.Test;

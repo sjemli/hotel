@@ -14,7 +14,7 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class CreditCardClient {
 
-    static final String PAYMENT_STATUS_PATH = "/payment-status";
+    public static final String PAYMENT_STATUS_PATH = "/payment-status";
     private final RestClient restClient;
 
     @Value("${credit-card-service.url}")

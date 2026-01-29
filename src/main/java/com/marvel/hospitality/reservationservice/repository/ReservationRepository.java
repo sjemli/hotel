@@ -2,8 +2,8 @@ package com.marvel.hospitality.reservationservice.repository;
 
 
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.PaymentMode;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 

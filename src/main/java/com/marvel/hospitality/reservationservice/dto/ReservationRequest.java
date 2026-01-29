@@ -1,8 +1,8 @@
 package com.marvel.hospitality.reservationservice.dto;
 
 
-import com.marvel.hospitality.reservationservice.enumtype.PaymentMode;
-import com.marvel.hospitality.reservationservice.enumtype.RoomSegment;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.RoomSegment;
 import jakarta.validation.constraints.*;
 
 

@@ -11,12 +11,8 @@ spring:
   cron: 0/5 * * * * ?
 
   kafka:
-    bootstrap-servers: ${spring.kafka.bootstrap-servers}
-logging:
-  level:
-    root: WARN
-    org.springframework: INFO
-    org.apache.kafka: DEBUG
+    concurrency: 1
+
 resilience4j:
   retry:
     instances:
@@ -30,3 +26,6 @@ resilience4j:
           - org.springframework.web.client.HttpClientErrorException
 
 
+app:
+  kafka:
+    enabled: true

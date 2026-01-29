@@ -2,7 +2,7 @@ package com.marvel.hospitality.reservationservice.scheduler;
 
 
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,8 +14,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 
-import static com.marvel.hospitality.reservationservice.enumtype.PaymentMode.BANK_TRANSFER;
-import static com.marvel.hospitality.reservationservice.enumtype.ReservationStatus.PENDING_PAYMENT;
+import static com.marvel.hospitality.reservationservice.model.PaymentMode.BANK_TRANSFER;
+import static com.marvel.hospitality.reservationservice.model.ReservationStatus.PENDING_PAYMENT;
 
 
 @Component

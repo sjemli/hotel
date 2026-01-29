@@ -3,8 +3,8 @@ package com.marvel.hospitality.reservationservice.listener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marvel.hospitality.reservationservice.dto.PaymentUpdateEvent;
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.PaymentMode;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
+import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.ContainerProperties;
@@ -23,6 +23,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.concurrent.BlockingQueue;
@@ -32,7 +33,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
+@EnableKafka
 @EmbeddedKafka(
 partitions = 1,
 topics = {"bank-transfer-payment-update", "bank-transfer-payment-update.DLT"}
@@ -90,7 +93,7 @@ class PaymentUpdateListenerIntegrationTest {
 
     @Test
     void invalidReservationIdFormat_sentToDLQ() throws Exception {
-        String invalidId = "abcd1234"; // minuscule = invalide selon ta règle
+        String invalidId = "abcd1234";
         sendEvent(new PaymentUpdateEvent("pay-003", "ACC-999", new BigDecimal("299.50"), "E2E1234567 " + invalidId));
 
         ConsumerRecord<String, String> record = dlqRecords.poll(15, SECONDS);
@@ -101,7 +104,6 @@ class PaymentUpdateListenerIntegrationTest {
 
     @Test
     void malformedDescription_sentToDLQ() throws Exception {
-        // Description sans ID
         sendEvent(new PaymentUpdateEvent("pay-004", "ACC-111", BigDecimal.ONE, "E2E1234567"));
 
         ConsumerRecord<String, String> record = dlqRecords.poll(15, SECONDS);
@@ -126,8 +128,7 @@ class PaymentUpdateListenerIntegrationTest {
         String nonExisting = "ZZZZ9999";
         sendEvent(new PaymentUpdateEvent("pay-005", "ACC-222", new BigDecimal("150"), "E2E1234567 " + nonExisting));
 
-        // On utilise Awaitility pour s'assurer que le message est traité sans erreur
-        Thread.sleep(2000); // Petit délai car on attend une "absence" de message
+        Thread.sleep(2000);
         assertThat(dlqRecords.isEmpty()).isTrue();
         assertThat(repository.findById(nonExisting)).isEmpty();
     }

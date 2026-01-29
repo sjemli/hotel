@@ -1,53 +1,61 @@
 package com.marvel.hospitality.reservationservice.e2e;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.marvel.hospitality.reservationservice.dto.PaymentUpdateEvent;
 import com.marvel.hospitality.reservationservice.dto.ReservationRequest;
 import com.marvel.hospitality.reservationservice.entity.Reservation;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import com.marvel.hospitality.reservationservice.scheduler.ReservationScheduler;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.annotation.EnableKafka;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
-import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-
+import org.wiremock.spring.ConfigureWireMock;
+import org.wiremock.spring.EnableWireMock;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 
-import static com.marvel.hospitality.reservationservice.enumtype.PaymentMode.BANK_TRANSFER;
-import static com.marvel.hospitality.reservationservice.enumtype.RoomSegment.MEDIUM;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.marvel.hospitality.reservationservice.model.PaymentMode.BANK_TRANSFER;
+import static com.marvel.hospitality.reservationservice.model.PaymentMode.CASH;
+import static com.marvel.hospitality.reservationservice.model.PaymentMode.CREDIT_CARD;
+import static com.marvel.hospitality.reservationservice.model.RoomSegment.LARGE;
+import static com.marvel.hospitality.reservationservice.model.RoomSegment.MEDIUM;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.SECONDS;
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @EnableKafka
 @ActiveProfiles("test")
 @EmbeddedKafka(partitions = 1, topics = {"bank-transfer-payment-update"})
+@EnableWireMock(@ConfigureWireMock(name = "credit-card-payment-server", port = 9090, registerSpringBean = true))
 @DirtiesContext
 class FullFlowE2ETest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -62,6 +70,82 @@ class FullFlowE2ETest {
 
     @Autowired
     EmbeddedKafkaBroker embeddedKafkaBroker;
+
+    @Qualifier("credit-card-payment-server")
+    @Autowired
+    private WireMockServer wireMockServer;
+
+    @BeforeEach
+    void setUp() {
+        wireMockServer.resetAll();
+        repository.deleteAll();
+    }
+
+    @Test
+    void cashPayment_immediateConfirmation() {
+        var request = new ReservationRequest("Seif", "333", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 1, 5),
+                MEDIUM, CASH, null);
+        var response = restTemplate.postForEntity("/reservations", request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        Reservation created = repository.findAll().getFirst();
+        assertThat(created.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(created.getPaymentMode()).isEqualTo(PaymentMode.CASH);
+        assertThat(created.getPaymentReference()).isNull();
+    }
+
+    @Test
+    void reservationTooLong_throwsValidationError() {
+        var request = new ReservationRequest("JohnOverstay", "101", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 3, 5),
+                LARGE, CASH, null);
+        var response = restTemplate.postForEntity("/reservations", request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // No reservation created
+        assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("JohnOverstay"));
+    }
+
+    @Test
+    void creditCardPayment_successfulConfirmation() {
+
+
+        wireMockServer.stubFor(post(urlPathMatching("/credit-card-payment-api/.*"))
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"status\": \"CONFIRMED\"}")));
+
+
+        var request = new ReservationRequest("John Card", "101", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 1, 5),
+                LARGE, CREDIT_CARD, "PAYREF-123456");
+        var response = restTemplate.postForEntity("/reservations", request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        Reservation created = repository.findAll().stream()
+                .filter(r -> r.getCustomerName().equals("John Card"))
+                .findFirst().orElseThrow();
+        assertThat(created.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(created.getPaymentMode()).isEqualTo(CREDIT_CARD);
+        assertThat(created.getPaymentReference()).isEqualTo("PAYREF-123456");
+    }
+
+    @Test
+    void creditCardPayment_rejected_throwsError() {
+
+        wireMockServer.stubFor(post(urlPathMatching("/credit-card-payment-api/.*"))
+                .willReturn(aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"status\": \"REJECTED\"}")));
+
+        var request = new ReservationRequest("John Card", "101", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 1, 5),
+                LARGE, CREDIT_CARD, "PAYREF-123456");
+
+        var response = restTemplate.postForEntity("/reservations", request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYMENT_REQUIRED);
+
+        assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("Charlie Reject"));
+    }
+
+
     @Test
     void create_bankTransfer_confirmViaKafka_thenCancelIfOverdue() throws Exception {
         var request = new ReservationRequest("John", "101", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 1, 5),
@@ -75,37 +159,18 @@ class FullFlowE2ETest {
         assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
 
 
-        // 2. Send Kafka confirmation
+        //  Send Kafka confirmation
         PaymentUpdateEvent event = new PaymentUpdateEvent("pay1", "acc1", BigDecimal.TEN, "E2E1234567 " + reservationId);
         String message = objectMapper.writeValueAsString(event);
         kafkaTemplate.send("bank-transfer-payment-update", message);
 
 
-        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(embeddedKafkaBroker,
-                "test-group",
-                true);
-
-
-  /*      Consumer<String, String> consumer = new DefaultKafkaConsumerFactory<>(
-                consumerProps,
-                new StringDeserializer(),
-                new StringDeserializer()
-        ).createConsumer();*/
-
-       // embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, "bank-transfer-payment-update");
-
-        // When
-
-        // Then
-       /* ConsumerRecord<String, String> received =
-                KafkaTestUtils.getSingleRecord(consumer, "bank-transfer-payment-update");
-*/
         await().atMost(10, SECONDS).untilAsserted(() -> {
             Reservation updated = repository.findById(reservationId).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
         });
 
-        // 3. Make overdue and run scheduler
+        // Make overdue and run scheduler
         pending.setStartDate(LocalDate.now().minusDays(1));
         repository.save(pending);
 

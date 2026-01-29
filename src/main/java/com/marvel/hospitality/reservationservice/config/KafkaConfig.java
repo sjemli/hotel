@@ -1,17 +1,16 @@
 package com.marvel.hospitality.reservationservice.config;
 
-import org.apache.kafka.clients.admin.AdminClientConfig;
+import com.marvel.hospitality.reservationservice.exception.IllegalPaymentUpdateMessageFormatException;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
@@ -22,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@ConditionalOnProperty(value = "app.kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
@@ -51,16 +51,17 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-            KafkaListenerEndpointRegistry KafkaListenerEndpointRegistry,
             ConsumerFactory<String, String> consumerFactory, KafkaTemplate<String, String> template) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(concurrency);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
-        FixedBackOff backOff = new FixedBackOff(1000L, 3L);
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
-                new DeadLetterPublishingRecoverer(template), backOff);
-        factory.setCommonErrorHandler(errorHandler);
+
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(template);
+        FixedBackOff backOff = new FixedBackOff(1000L, 2L);
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+        errorHandler.addNotRetryableExceptions(IllegalPaymentUpdateMessageFormatException.class);
+        factory.setCommonErrorHandler(errorHandler);;
         return factory;
     }
 
@@ -74,24 +75,18 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate() {
-        return new KafkaTemplate<>(producerFactory());
+    public KafkaTemplate<String, String> kafkaTemplate(ProducerFactory<String, String> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
     }
 
-    @Bean
-    public KafkaAdmin kafkaAdmin() {
-        Map<String, Object> configs = new HashMap<>();
-        configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        return new KafkaAdmin(configs);
-    }
 
     @Bean
     public NewTopic paymentUpdateTopic() {
-        return new NewTopic(paymentUpdateTopic, 1, (short) 1);
+        return new NewTopic(paymentUpdateTopic, concurrency, (short) 1);
     }
 
     @Bean
     public NewTopic dltTopic() {
-        return new NewTopic(dltTopic, 1, (short) 1);
+        return new NewTopic(dltTopic, concurrency, (short) 1);
     }
 }

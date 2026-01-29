@@ -13,14 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
-
-
-    @ExceptionHandler({ReservationValidationException.class, IllegalArgumentException.class})
+    @ExceptionHandler({MethodArgumentNotValidException.class, ReservationValidationException.class,
+            IllegalArgumentException.class})
     public ProblemDetail handleBadRequest(Exception ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
@@ -28,11 +22,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PaymentRejectedException.class)
     public ProblemDetail handleRejected(PaymentRejectedException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.PAYMENT_REQUIRED, ex.getMessage());
     }
 
 
-    @ExceptionHandler(CreditCardServiceUnavailableException.class)
+    @ExceptionHandler()
     public ProblemDetail handleUnavailable(CreditCardServiceUnavailableException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }

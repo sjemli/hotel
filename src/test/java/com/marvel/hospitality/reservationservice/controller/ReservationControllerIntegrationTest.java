@@ -1,7 +1,7 @@
 package com.marvel.hospitality.reservationservice.controller;
 
 import com.marvel.hospitality.reservationservice.dto.ReservationResponse;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,12 +36,33 @@ class ReservationControllerIntegrationTest {
                 {
                     "customerName":"Seif",
                     "roomNumber":"101",
-                    "startDate":"2026-02-01",
-                    "endDate":"2026-02-05",
+                    "startDate":"2100-02-01",
+                    "endDate":"2100-02-05",
                     "segment":"MEDIUM",
                     "paymentMode":"CASH"
                 }"""))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reservationId").value("ID123"));
+    }
+
+    @Test
+    void createReservation_invalid_date() throws Exception {
+        when(service.createReservation(any()))
+                .thenReturn(new ReservationResponse("ID123", ReservationStatus.CONFIRMED));
+
+        mockMvc.perform(post("/reservations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                {
+                    "customerName":"Seif",
+                    "roomNumber":"101",
+                    "startDate":"2025-02-01",
+                    "endDate":"2026-02-05",
+                    "segment":"MEDIUM",
+                    "paymentMode":"CASH"
+                }"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.status").value(400));
     }
 }

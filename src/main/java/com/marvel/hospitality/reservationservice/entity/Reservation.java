@@ -1,9 +1,9 @@
 package com.marvel.hospitality.reservationservice.entity;
 
 
-import com.marvel.hospitality.reservationservice.enumtype.PaymentMode;
-import com.marvel.hospitality.reservationservice.enumtype.ReservationStatus;
-import com.marvel.hospitality.reservationservice.enumtype.RoomSegment;
+import com.marvel.hospitality.reservationservice.model.PaymentMode;
+import com.marvel.hospitality.reservationservice.model.ReservationStatus;
+import com.marvel.hospitality.reservationservice.model.RoomSegment;
 import jakarta.persistence.*;
 import lombok.*;
 
