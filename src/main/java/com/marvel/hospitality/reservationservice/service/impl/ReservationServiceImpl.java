@@ -9,6 +9,7 @@ import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.exception.*;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import com.marvel.hospitality.reservationservice.service.ReservationService;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -73,11 +74,23 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ReservationValidationException("paymentReference is required for CreditCard payments");
         }
 
-        var response = creditCardClient.verifyPayment(ref);
-        if (response.status() != PaymentConfirmationStatus.CONFIRMED) {
-            throw new PaymentRejectedException("Status: " + response.status());
+        PaymentStatusResponse paymentStatusResponse = getStatusResponse(ref);
+
+        if (paymentStatusResponse.status() != PaymentConfirmationStatus.CONFIRMED) {
+            throw new PaymentRejectedException("The card payment was REJECTED");
         }
         res.setStatus(ReservationStatus.CONFIRMED);
+    }
+
+    private PaymentStatusResponse getStatusResponse(String ref) {
+        try {
+             return creditCardClient.verifyPayment(ref);
+        } catch(CallNotPermittedException callNotPermittedException) {
+            log.error("Circuit is open");
+            throw callNotPermittedException;
+        } catch(Exception e) {
+            throw new CreditCardServiceUnavailableException("Credit card service call failed", e);
+        }
     }
 
 

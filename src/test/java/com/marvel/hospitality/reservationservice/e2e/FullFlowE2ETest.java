@@ -9,6 +9,7 @@ import com.marvel.hospitality.reservationservice.model.PaymentMode;
 import com.marvel.hospitality.reservationservice.model.ReservationStatus;
 import com.marvel.hospitality.reservationservice.repository.ReservationRepository;
 import com.marvel.hospitality.reservationservice.scheduler.ReservationScheduler;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -100,15 +102,26 @@ class FullFlowE2ETest {
                 LARGE, CASH, null);
         var response = restTemplate.postForEntity("/reservations", request, String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("The Max reservation duration is 30 days");
 
         // No reservation created
         assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("JohnOverstay"));
     }
 
     @Test
+    @SneakyThrows
+    void oldDate_throwsValidationError() {
+        var request = new ReservationRequest("JohnOverstay", "101", LocalDate.of(2000, 1, 1), LocalDate.of(2000, 3, 5),
+                LARGE, CASH, null);
+        var response = restTemplate.postForEntity("/reservations", request, String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("must be a date in the present or in the future");
+
+        assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("JohnOverstay"));
+    }
+
+    @Test
     void creditCardPayment_successfulConfirmation() {
-
-
         wireMockServer.stubFor(post(urlPathMatching("/credit-card-payment-api/.*"))
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/json")
@@ -141,6 +154,7 @@ class FullFlowE2ETest {
 
         var response = restTemplate.postForEntity("/reservations", request, String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYMENT_REQUIRED);
+        assertThat(response.getBody()).contains("The card payment was REJECTED");
 
         assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("Charlie Reject"));
     }
