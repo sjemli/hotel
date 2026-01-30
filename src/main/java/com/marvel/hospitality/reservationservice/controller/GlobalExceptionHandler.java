@@ -1,11 +1,15 @@
 
 package com.marvel.hospitality.reservationservice.controller;
 
-import com.marvel.hospitality.reservationservice.exception.*;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+
+import com.marvel.hospitality.reservationservice.exception.CreditCardServiceUnavailableException;
+import com.marvel.hospitality.reservationservice.exception.InvalidPaymentReferenceException;
+import com.marvel.hospitality.reservationservice.exception.PaymentRejectedException;
+import com.marvel.hospitality.reservationservice.exception.ReservationValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -46,20 +50,11 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler({ReservationValidationException.class, IllegalArgumentException.class})
+    @ExceptionHandler({ReservationValidationException.class, IllegalArgumentException.class,
+            InvalidPaymentReferenceException.class, PaymentRejectedException.class})
     public ProblemDetail handleBadRequest(RuntimeException ex, WebRequest request) {
         return buildProblemDetail(
                 HttpStatus.BAD_REQUEST,
-                ex.getMessage(),
-                null,
-                request
-        );
-    }
-
-    @ExceptionHandler(PaymentRejectedException.class)
-    public ProblemDetail handlePaymentRejected(PaymentRejectedException ex, WebRequest request) {
-        return buildProblemDetail(
-                HttpStatus.PAYMENT_REQUIRED,
                 ex.getMessage(),
                 null,
                 request
@@ -71,18 +66,8 @@ public class GlobalExceptionHandler {
                                                      WebRequest request) {
         return buildProblemDetail(
                 HttpStatus.SERVICE_UNAVAILABLE,
-                "Credit card payment service call failed",
-                Map.of("retryAfter", "30s", "cause", ex.getCause()),
-                request
-        );
-    }
-
-    @ExceptionHandler(CallNotPermittedException.class)
-    public ProblemDetail handleCircuitOpen(CallNotPermittedException ex, WebRequest request) {
-        return buildProblemDetail(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Circuit breaker is open - credit card service temporarily unavailable",
-                Map.of("retryAfter", "60s"),
+                "Try Later - credit card service temporarily unavailable",
+                Map.of("cause", ex.getCause().getLocalizedMessage()),
                 request
         );
     }

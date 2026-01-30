@@ -17,14 +17,13 @@ resilience4j:
   retry:
     instances:
       creditCard:
-        maxAttempts: 8
+        maxAttempts: 3
         waitDuration: 2s
         retryExceptions:
           - org.springframework.web.client.ResourceAccessException # Timeout/Service Down
           - org.springframework.web.client.HttpServerErrorException # Errors 5xx
         ignoreExceptions:
           - org.springframework.web.client.HttpClientErrorException
-
 
 app:
   kafka:

@@ -65,4 +65,25 @@ class ReservationControllerIntegrationTest {
                 .andExpect(jsonPath("$.title").value("Bad Request"))
                 .andExpect(jsonPath("$.status").value(400));
     }
+
+    @Test
+    void createReservation_invalid_dateexce() throws Exception {
+        when(service.createReservation(any()))
+                .thenThrow(new RuntimeException("UnexpectedException"));
+
+        mockMvc.perform(post("/reservations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                {
+                    "customerName":"Seif",
+                    "roomNumber":"101",
+                    "startDate":"2100-02-01",
+                    "endDate":"2100-02-05",
+                    "segment":"MEDIUM",
+                    "paymentMode":"CASH"
+                }"""))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.title").value("Internal Server Error"))
+                .andExpect(jsonPath("$.status").value(500));
+    }
 }

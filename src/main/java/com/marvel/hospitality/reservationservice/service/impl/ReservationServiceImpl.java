@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 
 
 import java.time.LocalDate;
@@ -53,7 +54,6 @@ public class ReservationServiceImpl implements ReservationService {
             handleCreditCardPayment(reservation, request.paymentReference());
         }
 
-
         repository.save(reservation);
         log.info("Created reservation {}", reservation.getId());
 
@@ -85,9 +85,8 @@ public class ReservationServiceImpl implements ReservationService {
     private PaymentStatusResponse getStatusResponse(String ref) {
         try {
              return creditCardClient.verifyPayment(ref);
-        } catch(CallNotPermittedException callNotPermittedException) {
-            log.error("Circuit is open");
-            throw callNotPermittedException;
+        } catch (HttpClientErrorException clientErrorException) {
+            throw new InvalidPaymentReferenceException("Payment Reference was not found or invalid", clientErrorException);
         } catch(Exception e) {
             throw new CreditCardServiceUnavailableException("Credit card service call failed", e);
         }
