@@ -38,9 +38,9 @@ class PaymentUpdateListenerTest {
     @Test
     void should_throwException_when_payloadIsNotAValidJson() {
         String malformedJson = "{ \"invalid\": \"json\" ";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, malformedJson);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, null, malformedJson);
 
-        assertThatThrownBy(() -> listener.onMessage(record, acknowledgment))
+        assertThatThrownBy(() -> listener.onMessage(consumerRecord, acknowledgment))
                 .isInstanceOf(IllegalPaymentUpdateMessageFormatException.class)
                 .hasMessageContaining("Unable to parse payment update message");
 
@@ -50,12 +50,11 @@ class PaymentUpdateListenerTest {
 
     @Test
     void should_confirmPaymentAndAcknowledge_when_messageIsValid() throws Exception {
-        // Arrange
         String validId = "CONF1234";
         String payload = createPayload("E2E-REF " + validId);
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, null, payload);
 
-        listener.onMessage(record, acknowledgment);
+        listener.onMessage(consumerRecord, acknowledgment);
 
         verify(reservationService).confirmBankTransferPayment(validId);
         verify(acknowledgment).acknowledge();
@@ -72,9 +71,9 @@ class PaymentUpdateListenerTest {
 
         String finalDescription = "NULL".equals(description) ? null : description;
         String payload = createPayload(finalDescription);
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("topic", 0, 0, null, payload);
+        ConsumerRecord<String, String> consumerRecord = new ConsumerRecord<>("topic", 0, 0, null, payload);
 
-        assertThatThrownBy(() -> listener.onMessage(record, acknowledgment))
+        assertThatThrownBy(() -> listener.onMessage(consumerRecord, acknowledgment))
                 .isInstanceOf(IllegalPaymentUpdateMessageFormatException.class)
                 .hasMessageContaining(expectedErrorMessage);
 

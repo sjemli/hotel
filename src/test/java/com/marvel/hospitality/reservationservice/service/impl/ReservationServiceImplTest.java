@@ -116,7 +116,6 @@ class ReservationServiceImplTest {
                 .hasMessage("The Max reservation duration is 30 days");
     }
 
-    // --- TESTS CONFIRM BANK TRANSFER ---
 
     @Test
     void confirmBankTransferPayment_NotFound_DoesNothing() {

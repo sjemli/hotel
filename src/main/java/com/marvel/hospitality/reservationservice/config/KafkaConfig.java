@@ -31,11 +31,6 @@ public class KafkaConfig {
     private int concurrency;
     @Value("${spring.kafka.topic.payment-update}")
     private String paymentUpdateTopic;
-    @Value("${spring.kafka.dlt-topic}")
-    private String dltTopic;
-
-
-
 
    @Bean
     public ConsumerFactory<String, String> consumerFactory() {
@@ -61,7 +56,7 @@ public class KafkaConfig {
         FixedBackOff backOff = new FixedBackOff(1000L, 2L);
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         errorHandler.addNotRetryableExceptions(IllegalPaymentUpdateMessageFormatException.class);
-        factory.setCommonErrorHandler(errorHandler);;
+        factory.setCommonErrorHandler(errorHandler);
         return factory;
     }
 
@@ -79,14 +74,8 @@ public class KafkaConfig {
         return new KafkaTemplate<>(producerFactory);
     }
 
-
     @Bean
     public NewTopic paymentUpdateTopic() {
         return new NewTopic(paymentUpdateTopic, concurrency, (short) 1);
-    }
-
-    @Bean
-    public NewTopic dltTopic() {
-        return new NewTopic(dltTopic, concurrency, (short) 1);
     }
 }

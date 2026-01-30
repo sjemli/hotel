@@ -19,7 +19,7 @@ This service fulfills the following requirements:
       `E2E<10 characters unique id> <reservationId exactly 8 uppercase alphanumeric>`  
       Example: `E2E1234567890 ABC12345`
     - Confirms reservation if valid & pending → idempotent handling
-    - Invalid/malformed messages are **logged and sent directly to DLQ** (no retries) but other exceptions get retried.
+    - Invalid/malformed messages are **logged and sent directly to DLQ** (no retries) but other exceptions lead to retrying.
 
 3. **Automatic cancellation of overdue bank-transfer reservations**
     - Scheduled task (cron) cancels reservations where payment not confirmed **2 days before start date**
@@ -35,7 +35,7 @@ This service fulfills the following requirements:
 - **Event-driven architecture**
     - Kafka consumer with manual acknowledgment
     - Strict validation of payment event format
-    - Poison message handling: malformed → direct DLQ (no blocking retries)
+    - Malformed message handling: malformed → direct DLQ (no blocking retries)
 
 - **Resilience & observability**
     - Resilience4j circuit breaker & retry on credit-card calls
@@ -47,7 +47,7 @@ This service fulfills the following requirements:
     - Transactional DB operations
     - Input validation (Jakarta Bean Validation)
     - OpenAPI/Swagger documentation
-    - Test pyramid: unit, integration (with Embedded Kafka KRaft), E2E
+    - Test pyramid: unit, integration (with Embedded Kafka), E2E
 
 ## Technology Stack
 
@@ -71,7 +71,6 @@ This service fulfills the following requirements:
 ### Prerequisites
 - Java 21
 - Maven 3.8+
-- Docker (optional for PostgreSQL or Kafka)
 
 ### Run locally
 ```bash

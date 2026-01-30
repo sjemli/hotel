@@ -93,7 +93,9 @@ class CreditCardClientIntegrationTest {
                 .willReturn(aResponse().withStatus(500)));
 
         for (int i = 0; i < 5; i++) {
-            try { creditCardClient.verifyPayment("REF-FAIL"); } catch (Exception ignored) {}
+            try { creditCardClient.verifyPayment("REF-FAIL"); } catch (Exception ignored) {
+               //ignore
+            }
         }
 
         assertThat(circuitBreaker.getState()).isEqualTo(CircuitBreaker.State.OPEN);

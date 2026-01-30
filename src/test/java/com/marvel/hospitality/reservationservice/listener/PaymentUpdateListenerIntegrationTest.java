@@ -38,13 +38,12 @@ import static org.awaitility.Awaitility.await;
 @EnableKafka
 @EmbeddedKafka(
 partitions = 1,
-topics = {"bank-transfer-payment-update", "bank-transfer-payment-update.DLT"}
-        )
+topics = {PaymentUpdateListenerIntegrationTest.MAIN_TOPIC, PaymentUpdateListenerIntegrationTest.DLT_TOPIC})
 @DirtiesContext
 class PaymentUpdateListenerIntegrationTest {
 
-    private static final String MAIN_TOPIC = "bank-transfer-payment-update";
-    private static final String DLT_TOPIC = "bank-transfer-payment-update.DLT";
+    public static final String MAIN_TOPIC = "bank-transfer-payment-update";
+    public static final String DLT_TOPIC = "bank-transfer-payment-update-dlt";
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -96,9 +95,9 @@ class PaymentUpdateListenerIntegrationTest {
         String invalidId = "abcd1234";
         sendEvent(new PaymentUpdateEvent("pay-003", "ACC-999", new BigDecimal("299.50"), "E2E1234567 " + invalidId));
 
-        ConsumerRecord<String, String> record = dlqRecords.poll(15, SECONDS);
-        assertThat(record).isNotNull();
-        assertThat(record.value()).contains(invalidId);
+        ConsumerRecord<String, String> consumerRecord = dlqRecords.poll(15, SECONDS);
+        assertThat(consumerRecord).isNotNull();
+        assertThat(consumerRecord.value()).contains(invalidId);
         assertThat(repository.findById(invalidId)).isEmpty();
     }
 
@@ -106,9 +105,9 @@ class PaymentUpdateListenerIntegrationTest {
     void malformedDescription_sentToDLQ() throws Exception {
         sendEvent(new PaymentUpdateEvent("pay-004", "ACC-111", BigDecimal.ONE, "E2E1234567"));
 
-        ConsumerRecord<String, String> record = dlqRecords.poll(15, SECONDS);
-        assertThat(record).isNotNull();
-        assertThat(record.value()).contains("E2E1234567");
+        ConsumerRecord<String, String> consumerRecord = dlqRecords.poll(15, SECONDS);
+        assertThat(consumerRecord).isNotNull();
+        assertThat(consumerRecord.value()).contains("E2E1234567");
     }
 
     @Test
@@ -129,7 +128,7 @@ class PaymentUpdateListenerIntegrationTest {
         sendEvent(new PaymentUpdateEvent("pay-005", "ACC-222", new BigDecimal("150"), "E2E1234567 " + nonExisting));
 
         Thread.sleep(2000);
-        assertThat(dlqRecords.isEmpty()).isTrue();
+        assertThat(dlqRecords).isEmpty();
         assertThat(repository.findById(nonExisting)).isEmpty();
     }
 

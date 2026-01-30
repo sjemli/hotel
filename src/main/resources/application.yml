@@ -23,7 +23,7 @@ spring:
     topic:
       payment-update: bank-transfer-payment-update
     concurrency: 3
-    dlt-topic: bank-transfer-payment-update.DLT
+    dlt-topic: bank-transfer-payment-update-dlt
 
 
 credit-card-service:

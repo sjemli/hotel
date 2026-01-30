@@ -24,9 +24,9 @@ public class ReservationController {
     private final ReservationService service;
 
     @Operation(
-            summary = "Submit a room reservation",
+            summary = "Submits a room reservation",
             description = """
-            Submits a room reservation and gets q confirmation based on the payment mode:
+            Submits a room reservation and gets a confirmation based on the payment mode:
             - CASH: Room is confirmed immediately
             - CREDIT_CARD: Calls external credit-card-payment-service to verify payment
             - BANK_TRANSFER: Room is booked with PENDING_PAYMENT status (confirmation via Kafka later)

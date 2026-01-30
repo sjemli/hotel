@@ -45,12 +45,13 @@ import static com.marvel.hospitality.reservationservice.model.RoomSegment.MEDIUM
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+@ActiveProfiles("test")
 @AutoConfigureTestRestTemplate
 @EnableKafka
-@ActiveProfiles("test")
 @EmbeddedKafka(partitions = 1, topics = {"bank-transfer-payment-update"})
 @EnableWireMock(@ConfigureWireMock(name = "credit-card-payment-server", port = 9090, registerSpringBean = true))
 @DirtiesContext
@@ -109,7 +110,6 @@ class FullFlowE2ETest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).contains("The Max reservation duration is 30 days");
 
-        // No reservation created
         assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("JohnOverstay"));
     }
 
@@ -178,7 +178,6 @@ class FullFlowE2ETest {
         assertThat(pending.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
 
 
-        //  Send Kafka confirmation
         PaymentUpdateEvent event = new PaymentUpdateEvent("pay1", "acc1", BigDecimal.TEN, "E2E1234567 " + reservationId);
         String message = objectMapper.writeValueAsString(event);
         kafkaTemplate.send("bank-transfer-payment-update", message);
@@ -203,7 +202,7 @@ class FullFlowE2ETest {
     void creditCardPayment_circuitBreakerOpen_triggersCircuitException() throws InterruptedException {
 
         wireMockServer.stubFor(post(urlPathMatching("/credit-card-payment-api/.*"))
-                .willReturn(aResponse().withStatus(500)));  // Fail 4 times to open circuit
+                .willReturn(aResponse().withStatus(500)));
 
         var request = new ReservationRequest("John circuit", "101", LocalDate.of(2100, 1, 1), LocalDate.of(2100, 1, 5),
                 MEDIUM, CREDIT_CARD, "PAYREF-77777");
@@ -234,7 +233,6 @@ class FullFlowE2ETest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(response.getBody()).contains("Try Later - credit card service temporarily unavailable");
 
-        // No reservation saved
         assertThat(repository.findAll()).noneMatch(r -> r.getCustomerName().equals("John Unavailable"));
     }
 

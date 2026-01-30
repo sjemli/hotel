@@ -1,6 +1,6 @@
 package com.marvel.hospitality.reservationservice.client;
 
-import com.marvel.hospitality.reservationservice.dto.PaymentConfirmationStatus;
+import com.marvel.hospitality.reservationservice.model.PaymentConfirmationStatus;
 import com.marvel.hospitality.reservationservice.dto.PaymentStatusRequest;
 import com.marvel.hospitality.reservationservice.dto.PaymentStatusResponse;
 import org.junit.jupiter.api.BeforeEach;

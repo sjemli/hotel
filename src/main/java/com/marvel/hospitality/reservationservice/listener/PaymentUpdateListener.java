@@ -25,8 +25,8 @@ public class PaymentUpdateListener {
 
 
     @KafkaListener(topics = "${spring.kafka.topic.payment-update}", groupId = "${spring.kafka.consumer.group-id}")
-    public void onMessage(ConsumerRecord<String, String> record, Acknowledgment ack) {
-        String payload = record.value();
+    public void onMessage(ConsumerRecord<String, String> consumerRecord, Acknowledgment ack) {
+        String payload = consumerRecord.value();
         try {
             PaymentUpdateEvent paymentUpdateEvent = getPaymentEvent(payload);
             String reservationId = getReservationId(paymentUpdateEvent);

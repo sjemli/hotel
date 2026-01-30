@@ -1,4 +1,4 @@
-package com.marvel.hospitality.reservationservice.dto;
+package com.marvel.hospitality.reservationservice.model;
 
 
 public enum PaymentConfirmationStatus {
